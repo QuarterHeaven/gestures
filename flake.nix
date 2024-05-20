@@ -27,11 +27,7 @@
         pkgs = import nixpkgs {
           inherit system;
           overlays = [
-            rust-overlay.overlay
-            (self: super: {
-              rustc = self.rust-bin.stable.latest.default;
-              cargo = self.rust-bin.stable.latest.default;
-            })
+		(import rust-overlay)
           ];
         };
         inherit (import "${crate2nix}/tools.nix" { inherit pkgs; })
