@@ -16,41 +16,38 @@
   };
 
   outputs = { self, nixpkgs, utils, rust-overlay, crate2nix, ... }:
-  let 
-    name = "gestures";
-  in utils.lib.eachSystem
-    [
-      utils.lib.system.x86_64-linux
-    ]
-    (system:
+    let name = "gestures";
+    in utils.lib.eachSystem [ utils.lib.system.x86_64-linux ] (system:
       let
         pkgs = import nixpkgs {
           inherit system;
-          overlays = [
-		(import rust-overlay)
-          ];
+          overlays = [ (import rust-overlay) ];
         };
         inherit (import "${crate2nix}/tools.nix" { inherit pkgs; })
-          generatedCargoNix;   
+          generatedCargoNix;
 
-        project = pkgs.callPackage
-          (generatedCargoNix {
-            inherit name;
-            src = ./.;
-          })
-          {
-            defaultCrateOverrides = pkgs.defaultCrateOverrides // {
-              ${name} = oldAttrs: {
+        project = pkgs.callPackage (generatedCargoNix {
+          inherit name;
+          src = ./.;
+        }) {
+          defaultCrateOverrides = pkgs.defaultCrateOverrides // {
+            ${name} = oldAttrs:
+              {
                 inherit buildInputs nativeBuildInputs;
               } // buildEnvVars;
-            };
           };
+        };
 
         buildInputs = with pkgs; [ libinput udev ];
-        nativeBuildInputs = with pkgs; [ rustc cargo pkgconfig nixpkgs-fmt ];
-        buildEnvVars = {};
-      in
-      rec {
+        nativeBuildInputs = with pkgs; [
+          cargo-udeps
+          rust-analyzer
+          pkg-config
+          nixpkgs-fmt
+          rust-bin.stable.latest.default
+        ];
+        buildEnvVars = { };
+      in rec {
         packages.${name} = project.rootCrate.build;
 
         defaultPackage = packages.${name};
@@ -61,11 +58,10 @@
         };
         defaultApp = apps.${name};
 
-        devShell = pkgs.mkShell
-          {
-            inherit buildInputs nativeBuildInputs;
-            RUST_SRC_PATH = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
-          } // buildEnvVars;
-      }
-    );
+        devShell = pkgs.mkShell {
+          inherit buildInputs nativeBuildInputs;
+          RUST_SRC_PATH =
+            "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
+        } // buildEnvVars;
+      });
 }
